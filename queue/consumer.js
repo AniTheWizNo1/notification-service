@@ -2,6 +2,9 @@ const amqp = require('amqplib');
 const emailService = require('../services/emailService');
 const smsService = require('../services/smsService');
 const inAppService = require('../services/inAppService');
+const { saveNotification } = require('../services/notificationStore');
+
+const MAX_RETRIES = 3;
 
 async function startConsumer() {
   const connection = await amqp.connect('amqp://localhost');
@@ -9,7 +12,6 @@ async function startConsumer() {
   const queue = 'notifications';
 
   await channel.assertQueue(queue, { durable: true });
-
   console.log('Consumer ready. Waiting for notifications...');
 
   channel.consume(queue, async (msg) => {
@@ -32,10 +34,23 @@ async function startConsumer() {
             console.warn('Unsupported notification type:', notification.type);
         }
 
+        saveNotification(notification.userId, notification);
         channel.ack(msg);
       } catch (err) {
-        console.error('Error sending notification:', err);
-        // Optional: requeue or log failure
+        console.error('Error processing notification:', err.message);
+
+        const retryCount = notification.retries || 0;
+        if (retryCount < MAX_RETRIES) {
+          console.log(`Retrying... Attempt ${retryCount + 1}`);
+          notification.retries = retryCount + 1;
+          channel.sendToQueue(queue, Buffer.from(JSON.stringify(notification)), {
+            persistent: true,
+          });
+        } else {
+          console.error('Max retries exceeded. Dropping message.');
+        }
+
+        channel.ack(msg); // To avoid retry loop if not handled
       }
     }
   });

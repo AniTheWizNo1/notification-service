@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Notification Service</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f4f4f4;
+    }
+    h1, h2 {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    h1 {
+      font-size: 1.8em;
+      margin-bottom: 0.2em;
+    }
+    h2 {
+      font-size: 1.2em;
+      margin-top: 1.5em;
+      margin-bottom: 0.5em;
+    }
+    .container {
+      max-width: 600px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin: 0.5em 0 0.2em;
+      font-weight: bold;
+    }
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+      margin-bottom: 1em;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button, input[type="submit"] {
+      padding: 8px 16px;
+      margin: 0.5em 0;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background-color: #28a745;
+      color: #fff;
+      font-size: 1em;
+    }
+    button:hover, input[type="submit"]:hover {
+      background-color: #218838;
+    }
+    ul#notificationsList {
+      list-style: none;
+      padding: 0;
+    }
+    ul#notificationsList li {
+      background: #e9ecef;
+      margin: 5px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    ul#notificationsList li.info {
+      background: #f8f9fa;
+      font-style: italic;
+      color: #555;
+    }
+    ul#notificationsList li.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Notification Service</h1>
+
+    <!-- Section to fetch/display notifications -->
+    <div class="fetch-section">
+      <label for="userIdInput">User ID:</label>
+      <input type="number" id="userIdInput" name="userId" min="1" required />
+      <button id="fetchBtn">Get Notifications</button>
+    </div>
+
+    <h2>Notifications</h2>
+    <ul id="notificationsList">
+      <li class="info">No notifications loaded.</li>
+    </ul>
+
+    <h2>Send a Notification</h2>
+    <form id="sendForm">
+      <label for="typeInput">Type:</label>
+      <select id="typeInput" name="type" required>
+        <option value="" disabled selected>Select type</option>
+        <option value="email">Email</option>
+        <option value="sms">SMS</option>
+        <option value="in-app">In-App</option>
+      </select>
+
+      <label for="contactInput">Contact (Email or Phone):</label>
+      <input type="text" id="contactInput" name="contact" placeholder="Required for Email/SMS" />
+
+      <label for="messageInput">Message:</label>
+      <textarea id="messageInput" name="message" rows="3" required></textarea>
+
+      <input type="submit" value="Send Notification" />
+    </form>
+  </div>
+
+  <script>
+    // Fetch notifications for the specified user
+    async function fetchNotifications() {
+      const userIdValue = document.getElementById('userIdInput').value.trim();
+      if (!userIdValue) {
+        alert('Please enter a User ID');
+        return;
+      }
+      const userId = Number(userIdValue);
+      if (isNaN(userId)) {
+        alert('User ID must be a number');
+        return;
+      }
+      const listEl = document.getElementById('notificationsList');
+      listEl.innerHTML = '';
+
+      try {
+        const response = await fetch(`/users/${userId}/notifications`);
+        if (!response.ok) {
+          throw new Error(`Error fetching notifications (Status ${response.status})`);
+        }
+        const data = await response.json();
+
+        let notifications = [];
+        if (Array.isArray(data)) {
+          notifications = data;
+        } else if (data && typeof data === 'object') {
+          if (Array.isArray(data.notifications)) {
+            notifications = data.notifications;
+          } else if ('notifications' in data && data.notifications != null) {
+            notifications = [ data.notifications ];
+          }
+        }
+
+        if (notifications.length === 0) {
+          const li = document.createElement('li');
+          li.textContent = 'No notifications found.';
+          li.className = 'info';
+          listEl.appendChild(li);
+        } else {
+          notifications.forEach(notification => {
+            const li = document.createElement('li');
+            let text = '';
+            if ('type' in notification) text += `[${notification.type}] `;
+            if ('message' in notification) text += notification.message;
+            li.textContent = text;
+            listEl.appendChild(li);
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error);
+        const li = document.createElement('li');
+        li.textContent = 'Failed to load notifications.';
+        li.className = 'error';
+        listEl.appendChild(li);
+      }
+    }
+
+    // Send notification
+    async function sendNotification(event) {
+      event.preventDefault();
+      const userIdValue = document.getElementById('userIdInput').value.trim();
+      const type = document.getElementById('typeInput').value;
+      const contact = document.getElementById('contactInput').value.trim();
+      const message = document.getElementById('messageInput').value.trim();
+
+      if (!userIdValue) return alert('Please enter a User ID.');
+      const userId = Number(userIdValue);
+      if (isNaN(userId)) return alert('User ID must be a number.');
+      if (!type) return alert('Please select a notification type.');
+      if ((type === 'email' || type === 'sms') && !contact) return alert('Contact is required for Email or SMS.');
+      if (!message) return alert('Please enter a message.');
+
+      try {
+        const response = await fetch('/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, type, contact, message })
+        });
+
+        if (!response.ok) throw new Error(`Error sending notification (Status ${response.status})`);
+        const result = await response.json();
+        if (!result.success) throw new Error(result.message || 'Notification send failed');
+
+        alert('Notification sent successfully!');
+        document.getElementById('messageInput').value = '';
+        document.getElementById('contactInput').value = '';
+        document.getElementById('typeInput').value = '';
+        fetchNotifications();
+      } catch (error) {
+        console.error('Failed to send notification:', error);
+        alert('Failed to send notification. Please try again.');
+      }
+    }
+
+    document.getElementById('fetchBtn').addEventListener('click', fetchNotifications);
+    document.getElementById('sendForm').addEventListener('submit', sendNotification);
+  </script>
+</body>
+</html>

@@ -1,3 +1,12 @@
+const mongoose = require('mongoose');
+require('dotenv').config();
+
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log('MongoDB connected in consumer'))
+.catch(err => console.error('MongoDB error in consumer:', err));
 const amqp = require('amqplib');
 const emailService = require('../services/emailService');
 const smsService = require('../services/smsService');

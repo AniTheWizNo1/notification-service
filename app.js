@@ -1,15 +1,19 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const dotenv = require('dotenv');
+const mongoose = require('mongoose');
+const path = require('path');
 const bodyParser = require('body-parser');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const Notification = require('./models/Notification');
 
 dotenv.config();
-
-const app = express(); // ⬅️ DECLARE APP BEFORE USING IT
+const app = express();
 
 app.use(bodyParser.json());
+
+// Serve frontend (index.html)
+app.use(express.static(path.join(__dirname)));
 
 // Swagger setup
 const swaggerOptions = {
@@ -20,9 +24,7 @@ const swaggerOptions = {
       version: '1.0.0',
       description: 'API to send and fetch notifications'
     },
-    servers: [
-      { url: 'http://localhost:3000' }
-    ]
+    servers: [{ url: 'http://localhost:3000' }]
   },
   apis: ['./routes/*.js']
 };
@@ -34,18 +36,27 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 const notificationRoutes = require('./routes/notificationRoutes');
 app.use('/', notificationRoutes);
 
-// MongoDB connection
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch((err) => console.error('DB error:', err));
+// MongoDB Atlas connection
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log('MongoDB Atlas connected'))
+.catch(err => console.error('MongoDB connection error:', err));
 
-app.listen(process.env.PORT, () => {
-  console.log(`Server running on port ${process.env.PORT}`);
-});
-const { getUserNotifications } = require('./services/notificationStore');
-
-app.get('/users/:id/notifications', (req, res) => {
+// GET: Fetch notifications for a user from MongoDB
+app.get('/users/:id/notifications', async (req, res) => {
   const userId = req.params.id;
-  const notifications = getUserNotifications(userId);
-  res.json({ success: true, notifications });
+  try {
+    const notifications = await Notification.find({ userId }).sort({ timestamp: -1 });
+    res.json({ success: true, notifications});
+  } catch (err) {
+    console.error('Error fetching notifications:', err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Start server
+app.listen(process.env.PORT || 3000, () => {
+  console.log(`Server running on port ${process.env.PORT || 3000}`);
 });

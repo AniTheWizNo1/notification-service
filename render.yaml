@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: notification-service
+    runtime: node
+    repo: https://github.com/AniTheWizNo1/notification-service
+    branch: main
+    buildCommand: npm install
+    startCommand: node app.js
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: MONGO_URI
+        value: mongodb+srv://aniket10das:STqjGeGgqxWkxCph@cluster0.kayff6p.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - key: SENDGRID_USER
+        value: aniket10das@gmail.com
+      - key: SENDGRID_PASS
+        value: urluuxjezwunnhqf
+      - key: TWILIO_SID
+        value: ACa9ceefa0ed3fe991dbd085fd8d924a22
+      - key: TWILIO_AUTH_TOKEN
+        value: 79987cc02c60ecef7416a9624f9974df
+      - key: TWILIO_PHONE
+        value: +14177445432
+    autoDeploy: true
+
+  - type: worker
+    name: notification-consumer
+    runtime: node
+    repo: https://github.com/AniTheWizNo1/notification-service
+    branch: main
+    buildCommand: npm install
+    startCommand: node queue/consumer.js
+    envVars:
+      - key: MONGO_URI
+        value: mongodb+srv://aniket10das:STqjGeGgqxWkxCph@cluster0.kayff6p.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - key: SENDGRID_USER
+        value: aniket10das@gmail.com
+      - key: SENDGRID_PASS
+        value: urluuxjezwunnhqf
+      - key: TWILIO_SID
+        value: ACa9ceefa0ed3fe991dbd085fd8d924a22
+      - key: TWILIO_AUTH_TOKEN
+        value: 79987cc02c60ecef7416a9624f9974df
+      - key: TWILIO_PHONE
+        value: +14177445432

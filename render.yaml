@@ -3,7 +3,7 @@ services:
     name: notification-service
     runtime: node
     repo: https://github.com/AniTheWizNo1/notification-service
-    branch: main
+    branch: master
     plan: free
     buildCommand: npm install
     startCommand: node app.js
@@ -28,7 +28,7 @@ services:
     name: notification-consumer
     runtime: node
     repo: https://github.com/AniTheWizNo1/notification-service
-    branch: main
+    branch: master
     plan : free
     buildCommand: npm install
     startCommand: node queue/consumer.js

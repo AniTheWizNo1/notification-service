@@ -4,6 +4,7 @@ services:
     runtime: node
     repo: https://github.com/AniTheWizNo1/notification-service
     branch: main
+    plan: free
     buildCommand: npm install
     startCommand: node app.js
     envVars:

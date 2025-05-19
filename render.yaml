@@ -24,8 +24,8 @@ services:
         value: +14177445432
     autoDeploy: true
 
-  - type: worker
-    name: notification-consumer
+  - type: web
+    name: notification-consumer-service
     runtime: node
     repo: https://github.com/AniTheWizNo1/notification-service
     branch: master
